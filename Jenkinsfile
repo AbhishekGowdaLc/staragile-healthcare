@@ -1,73 +1,58 @@
-node {
-    def mavenHome
-    def mavenCMD
-    def docker
-    def dockerCMD
-    def tagName
-    
-    stage('prepare environment'){
-        echo 'Initialize the variables'
-        mavenHome = tool name: 'myMaven' , type: 'maven'
-        mavenCMD = "${mavenHome}/bin/mvn"
-        docker = tool name: 'myDocker' , type: 'org.jenkinsci.plugins.docker.commons.tools.DockerTool'
-        dockerCMD = "${docker}/bin/docker"
-        tagName = "1.0"
-    }
-    stage ('code checkout'){
-        try{
-        echo 'pulling the code from github repo'
-        git 'https://github.com/niladrimondal/star-agile-health-care.git'
-        }
-        catch(Exception e){
-            echo 'Exception Occur'
-            currentBuild.result = "FAILURE"
-            emailext body: '''Hello Staragile Deveops
+pipeline {
+agent any 
+tools {
+maven 'MY_MAVEN'
+}
 
-            The Build Number ${BUILD_NUMBER} is Failed. Please look into that.
+stages {
+stage("git checkout"){
+steps{
+git 'https://github.com/AbhishekGowdaLc/staragile-healthcare.git'
+ }
+ }
+stage('maven build'){
+steps{
+echo 'cleaning..compiling..testing..packaging..'
+sh 'mvn clean package'
+ }
+ }
+ 
+stage('Publish HTML Report'){
+steps{
+ publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, keepAll: 
+false, reportDir: '/var/lib/jenkins/workspace/Project3_healthcare/target/surefirereports', reportFiles: 'index.html', reportName: 'HTML Report', reportTitles: '', 
+useWrapperFileDirectly: true])
+ }
+}
+stage('Containerize the application'){
+steps{
+echo 'Creating a docker image'
+sh 'docker build -t abhishekgowda123/healthcareapp:1.0 .'
+ }
+} 
+stage('Pushing the image to dockerhub'){
+steps{
+withDockerRegistry([ credentialsId: "dockerhub", url: "https://hub.docker.com/?ref=login" ]) {
+sh 'docker push abhishekgowda123/healthcareapp:1.0'
+ }
+ } 
+ }
 
-            Thanks,''', subject: 'The jenkis Job ${JOB_NAME} is Failed ', to: 'niladrimondal.mondal@gmail.com'
-        }
-    }
-    stage('Build the application'){
-        echo 'clean and compile and test package'
-        //sh 'mvn clean package'
-        sh "${mavenCMD} clean package"
-    }
-    stage('publish html reports'){
-        publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: '/var/lib/jenkins/workspace/StrarAgileDevopsPipeline/target/surefire-reports', reportFiles: 'index.html', reportName: 'HTML Report Staragile/var/lib/jenkins/workspace/StrarAgileDevopsPipeline', reportTitles: '', useWrapperFileDirectly: true])
-    }
-    stage('Build the DockerImage of the application'){
-        try{
-        echo 'creating the docker image'
-		// if you get permission denied issue
-        //sudo usermod -a -G docker jenkins
-        //restart Jenkins
-        //or add sudoers file below line
-        //jenkins ALL=(ALL) NOPASSWD:ALL
-        sh "${dockerCMD} build -t niladrimondaldcr/medicure:${tagName} ."
-        
-        }
-        catch(Exception e){
-            echo 'Exception Occur'
-            currentBuild.result = "FAILURE"
-            emailext body: '''Hello Staragile Deveops
-
-            The Build Number ${BUILD_NUMBER} is Failed. Please look into that.
-
-            Thanks,''', subject: 'The jenkis Job ${JOB_NAME} is Failed ', to: 'niladrimondal.mondal@gmail.com'
-            
-        }
-    }
-    stage('push the docker image to dockerhub'){
-        echo 'pushing docker image'
-        withCredentials([string(credentialsId: 'docker-password', variable: 'DockerPassword')]) {
-        // some block
-        sh "${dockerCMD} login -u niladrimondaldcr -p ${DockerPassword}"
-        sh "${dockerCMD} push niladrimondaldcr/medicure:${tagName}"
-        }
-    }
-    stage('deploy the application'){
-        
-        ansiblePlaybook become: true, credentialsId: 'ansiblekey', disableHostKeyChecking: true, installation: 'MyAnsible', inventory: '/etc/ansible/hosts', playbook: 'ansible-playbook.yml'
-    }
+stage('deploy to kubernetes'){
+steps{
+sshagent(['K8s']) {
+sh 'scp -o StrictHostKeyChecking=no deployment.yml
+ubuntu@172.42.22.152:/home/ubuntu'
+script{
+try{
+sh 'ssh ubuntu@44.214.143.86 kubectl apply -f .'
+}catch(error)
+{
+sh 'ssh ubuntu@44.214.143.86 kubectl create -f .'
+}
+}
+}
+}
+}
+}
 }
