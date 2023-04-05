@@ -3,20 +3,20 @@ kind: Deployment
 metadata:
   name: medicure-deploy
   labels:
-    app: medicure-mvn-app
+    app: medicure-app
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: medicure-mvn-app
+      app: medicure-app
   template:
     metadata:
       labels:
-        app: medicure-mvn-app
+        app: medicure-app
     spec:
       containers:
-      - name: medicure-mvn-container
-        image: niladrimondaldcr/medicure:1.0
+      - name: medicure-container
+        image: abhishekgowda123/healthcareapp:1.0
         ports:
         - containerPort: 8082
 ---
@@ -25,10 +25,10 @@ kind: Service
 metadata:
   name: medicure-np-service
   labels:
-    app: medicure-mvn-app
+    app: medicure-app
 spec:
   selector:
-    app: medicure-mvn-app
+    app: medicure-app
 
   type: NodePort
   ports:
