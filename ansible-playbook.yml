@@ -18,7 +18,7 @@
 
   - name: Copy file with owner and permission, using symbolic representation
     ansible.builtin.copy:
-      src: ./medicurelb.yml
+      src: ./deployment.yml
       dest: /home/ubuntu/deployment.yml
       owner: ubuntu
       group: ubuntu
