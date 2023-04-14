@@ -19,12 +19,12 @@
   - name: Copy file with owner and permission, using symbolic representation
     ansible.builtin.copy:
       src: ./medicurelb.yml
-      dest: /home/ubuntu/medicurelb.yml
+      dest: /home/ubuntu/deployment.yml
       owner: ubuntu
       group: ubuntu
       mode: u=rw,g=r,o=r
    
   - name : run container
-    command : kubectl apply -f /home/ubuntu/medicurelb.yml
+    command : kubectl apply -f /home/ubuntu/deployment.yml
     become : yes
     become_user : ubuntu
